@@ -325,7 +325,7 @@ export function ChatWidget({ lang, t, phone, minWord }: { lang: Lang; t: Dict['c
             className="fixed inset-0 z-50 flex flex-col overflow-hidden bg-mist sm:inset-auto sm:end-6 sm:bottom-24 sm:h-[min(680px,calc(100svh-8rem))] sm:w-[400px] sm:rounded-[1.75rem] sm:shadow-[0_40px_100px_-30px_rgb(11_27_43/0.45)] sm:ring-1 sm:ring-black/5"
           >
             {/* header */}
-            <header className="relative flex items-center gap-3 bg-linear-to-br from-brand-deep via-brand to-accent px-4 pt-[max(0.9rem,env(safe-area-inset-top))] pb-4 text-white">
+            <header className="relative flex shrink-0 items-center gap-3 bg-linear-to-br from-brand-deep via-brand to-accent px-4 pt-[max(0.9rem,env(safe-area-inset-top))] pb-4 text-white">
               <span className="relative grid h-10 w-10 place-items-center rounded-full bg-white/15 ring-1 ring-white/25">
                 <svg viewBox="0 0 24 24" className="h-5 w-5" aria-hidden="true"><path fill="currentColor" d="M12 3.2c-2-1.3-6.4-1.3-7.7 1.6-1.3 2.9.2 6.4 1.1 8.6.9 2.4.7 6.6 2.4 8.4 1.3 1.3 2.2-.7 2.4-2.6.2-1.8.7-3.7 1.8-3.7s1.6 1.9 1.8 3.7c.2 1.9 1.1 3.9 2.4 2.6 1.7-1.8 1.5-6 2.4-8.4.9-2.2 2.4-5.7 1.1-8.6C18.4 1.9 14 1.9 12 3.2z" /></svg>
                 <span className="absolute -end-0.5 -bottom-0.5 h-3 w-3 rounded-full bg-emerald-400 ring-2 ring-brand" />
@@ -347,109 +347,112 @@ export function ChatWidget({ lang, t, phone, minWord }: { lang: Lang; t: Dict['c
               </button>
             </header>
 
-            {/* messages */}
-            <div ref={scroller} className="flex-1 space-y-3 overflow-y-auto overscroll-contain px-4 py-5" aria-live="polite" aria-relevant="additions">
-              <Bubble role="assistant">{t.welcome}</Bubble>
-              {msgs.length === 0 && (
-                <QuickReplies items={t.starters.map(s => ({ title: s, value: s }))} onPick={pick} disabled={busy} />
-              )}
-
-              {msgs.map(m => (
-                <div key={m.id} className="space-y-2.5">
-                  {(m.text || m.role === 'user') && (
-                    m.request ? <RequestCard r={m.request} t={t} lang={lang} /> :
-                    m.voice ? <VoiceBubble m={m} t={t} mmss={mmss} /> :
-                    <Bubble role={m.role} error={m.error}>
-                      {m.role === 'assistant' ? <RichText text={m.text} /> : m.text}
-                    </Bubble>
-                  )}
-                  {m.error && m.detail && (
-                    <p className="ms-10 rounded-xl bg-amber-50 px-3 py-2 font-mono text-[11px] leading-snug text-amber-900 ring-1 ring-amber-200" dir="ltr">
-                      For you (only shown on your computer): {m.detail}
-                    </p>
-                  )}
-                  {m.error && m.retry && m === last && (
-                    <div className="ps-10">
-                      <button type="button" onClick={() => { const x = retryAudio.current.get(m.id); void send(m.retry!.trim(), x?.request ? t.bookingRequest : undefined, x ?? {}); }} disabled={busy} className="rounded-full bg-white px-3.5 py-1.5 text-xs font-semibold text-brand ring-1 ring-brand/30 hover:bg-sky">
-                        {t.retry}
-                      </button>
-                    </div>
-                  )}
-                  {m.carousel && <CarouselView data={m.carousel} onPick={pick} disabled={busy || m !== last} hint={t.scrollHint} />}
-                  {m.quickReplies && m.quickReplies.length > 0 && m === last && <QuickReplies items={m.quickReplies} onPick={pick} disabled={busy} />}
-                  {m.booking && <BookingCard b={m.booking} t={t} demo={m.demo} />}
-                </div>
-              ))}
-              <AnimatePresence>{busy && <Typing label={t.typing} />}</AnimatePresence>
-              {isDemo && <p className="pt-1 text-center text-[11px] text-amber-700">{t.demo}</p>}
-            </div>
-
-            {/* input */}
-            <form onSubmit={onSubmit} className="border-t border-line/70 bg-white/90 px-3 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur">
-              {voice.error && (
-                <p className="mb-2 flex items-start justify-between gap-2 rounded-xl bg-amber-50 px-3 py-2 text-xs text-amber-900 ring-1 ring-amber-200">
-                  {voice.error}
-                  <button type="button" onClick={() => voice.setError('')} aria-label={t.close} className="shrink-0 font-bold">×</button>
-                </p>
-              )}
-              {voice.status !== 'idle' ? (
-                <div className="flex items-center gap-2 rounded-2xl bg-mist p-1.5 ring-2 ring-rose-300/70" role="status">
-                  <button type="button" onClick={voice.cancel} disabled={voice.status === 'processing'} aria-label={t.voiceCancel}
-                    className="grid h-10 w-10 shrink-0 place-items-center rounded-xl text-ink-soft hover:bg-white disabled:opacity-40">
-                    <svg viewBox="0 0 20 20" className="h-4.5 w-4.5" aria-hidden="true"><path d="M4 6h12M8 6V4h4v2m-6 0 .7 10h6.6L14 6" stroke="currentColor" strokeWidth="1.7" fill="none" strokeLinecap="round" strokeLinejoin="round" /></svg>
-                  </button>
-                  <span className="relative flex h-2.5 w-2.5 shrink-0">
-                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-rose-400 opacity-70" />
-                    <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-rose-500" />
-                  </span>
-                  <span className="text-sm font-semibold tabular-nums text-ink" dir="ltr">{mmss(voice.seconds)}</span>
-                  <span className="flex h-8 flex-1 items-center justify-center gap-[3px] overflow-hidden" aria-hidden="true">
-                    {Array.from({ length: 18 }, (_, i) => (
-                      <span key={i} className="w-[3px] rounded-full bg-brand/70 transition-[height] duration-100"
-                        style={{ height: `${Math.max(12, Math.min(100, voice.level * 100 * (0.55 + 0.45 * Math.sin(i * 1.7 + voice.seconds))))}%` }} />
-                    ))}
-                  </span>
-                  <span className="hidden text-[11px] text-muted sm:inline">{voice.status === 'processing' ? '…' : `${t.voiceRecording} (${MAX_SECONDS}s)`}</span>
-                  <button type="button" onClick={voice.send} disabled={voice.status === 'processing'} aria-label={t.voiceStop}
-                    className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-ink text-white disabled:opacity-50">
-                    <svg viewBox="0 0 20 20" className="h-4.5 w-4.5 rtl:-scale-x-100" aria-hidden="true"><path d="M3.5 10h12M11 5l5 5-5 5" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round" /></svg>
-                  </button>
-                </div>
-              ) : (
-              <div className="flex items-end gap-2 rounded-2xl bg-mist p-1.5 ring-1 ring-line focus-within:ring-2 focus-within:ring-brand/40">
-                <label htmlFor="dentalflow-chat-input" className="sr-only">{t.placeholder}</label>
-                <textarea
-                  id="dentalflow-chat-input"
-                  ref={input}
-                  rows={1}
-                  value={draft}
-                  maxLength={1000}
-                  onChange={e => setDraft(e.target.value)}
-                  onKeyDown={onKey}
-                  placeholder={t.placeholder}
-                  dir="auto"
-                  className="max-h-[120px] min-h-[40px] flex-1 resize-none bg-transparent px-2.5 py-2 text-[15px] leading-6 text-ink outline-none placeholder:text-muted focus-visible:outline-none"
-                />
-                {draft.trim() ? (
-                  <motion.button type="submit" disabled={busy} whileTap={{ scale: 0.9 }} aria-label={t.send}
-                    className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-ink text-white transition disabled:bg-line disabled:text-muted">
-                    <svg viewBox="0 0 20 20" className="h-4.5 w-4.5 rtl:-scale-x-100" aria-hidden="true"><path d="M3.5 10h12M11 5l5 5-5 5" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round" /></svg>
-                  </motion.button>
-                ) : (
-                  <motion.button type="button" onClick={() => void voice.start()} disabled={busy} whileTap={{ scale: 0.9 }} aria-label={t.voiceStart} title={t.voiceStart}
-                    className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-linear-to-br from-brand to-accent text-white transition disabled:opacity-40">
-                    <svg viewBox="0 0 20 20" className="h-4.5 w-4.5" aria-hidden="true"><rect x="7" y="2.5" width="6" height="10" rx="3" fill="currentColor" /><path d="M4.5 9.5a5.5 5.5 0 0 0 11 0M10 15v2.5" stroke="currentColor" strokeWidth="1.7" fill="none" strokeLinecap="round" /></svg>
-                  </motion.button>
+            {/* Keep overlays below the header, including safe-area and translated text height. */}
+            <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden">
+              {/* messages */}
+              <div ref={scroller} className="flex-1 space-y-3 overflow-y-auto overscroll-contain px-4 py-5" aria-live="polite" aria-relevant="additions">
+                <Bubble role="assistant">{t.welcome}</Bubble>
+                {msgs.length === 0 && (
+                  <QuickReplies items={t.starters.map(s => ({ title: s, value: s }))} onPick={pick} disabled={busy} />
                 )}
+
+                {msgs.map(m => (
+                  <div key={m.id} className="space-y-2.5">
+                    {(m.text || m.role === 'user') && (
+                      m.request ? <RequestCard r={m.request} t={t} lang={lang} /> :
+                      m.voice ? <VoiceBubble m={m} t={t} mmss={mmss} /> :
+                      <Bubble role={m.role} error={m.error}>
+                        {m.role === 'assistant' ? <RichText text={m.text} /> : m.text}
+                      </Bubble>
+                    )}
+                    {m.error && m.detail && (
+                      <p className="ms-10 rounded-xl bg-amber-50 px-3 py-2 font-mono text-[11px] leading-snug text-amber-900 ring-1 ring-amber-200" dir="ltr">
+                        For you (only shown on your computer): {m.detail}
+                      </p>
+                    )}
+                    {m.error && m.retry && m === last && (
+                      <div className="ps-10">
+                        <button type="button" onClick={() => { const x = retryAudio.current.get(m.id); void send(m.retry!.trim(), x?.request ? t.bookingRequest : undefined, x ?? {}); }} disabled={busy} className="rounded-full bg-white px-3.5 py-1.5 text-xs font-semibold text-brand ring-1 ring-brand/30 hover:bg-sky">
+                          {t.retry}
+                        </button>
+                      </div>
+                    )}
+                    {m.carousel && <CarouselView data={m.carousel} onPick={pick} disabled={busy || m !== last} hint={t.scrollHint} />}
+                    {m.quickReplies && m.quickReplies.length > 0 && m === last && <QuickReplies items={m.quickReplies} onPick={pick} disabled={busy} />}
+                    {m.booking && <BookingCard b={m.booking} t={t} demo={m.demo} />}
+                  </div>
+                ))}
+                <AnimatePresence>{busy && <Typing label={t.typing} />}</AnimatePresence>
+                {isDemo && <p className="pt-1 text-center text-[11px] text-amber-700">{t.demo}</p>}
               </div>
-              )}
-              <p className="mt-2 px-1 text-center text-[10.5px] leading-snug text-muted">
-                {fill(t.privacy, { phone: `\u2066${phone}\u2069` })} · {t.poweredBy}
-              </p>
-            </form>
-            <AnimatePresence>
-              {panel && <BookingPanel lang={lang} t={t} minWord={minWord} start={panel} onClose={() => setPanel(null)} onConfirm={confirmBooking} />}
-            </AnimatePresence>
+
+              {/* input */}
+              <form onSubmit={onSubmit} className="border-t border-line/70 bg-white/90 px-3 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur">
+                {voice.error && (
+                  <p className="mb-2 flex items-start justify-between gap-2 rounded-xl bg-amber-50 px-3 py-2 text-xs text-amber-900 ring-1 ring-amber-200">
+                    {voice.error}
+                    <button type="button" onClick={() => voice.setError('')} aria-label={t.close} className="shrink-0 font-bold">×</button>
+                  </p>
+                )}
+                {voice.status !== 'idle' ? (
+                  <div className="flex items-center gap-2 rounded-2xl bg-mist p-1.5 ring-2 ring-rose-300/70" role="status">
+                    <button type="button" onClick={voice.cancel} disabled={voice.status === 'processing'} aria-label={t.voiceCancel}
+                      className="grid h-10 w-10 shrink-0 place-items-center rounded-xl text-ink-soft hover:bg-white disabled:opacity-40">
+                      <svg viewBox="0 0 20 20" className="h-4.5 w-4.5" aria-hidden="true"><path d="M4 6h12M8 6V4h4v2m-6 0 .7 10h6.6L14 6" stroke="currentColor" strokeWidth="1.7" fill="none" strokeLinecap="round" strokeLinejoin="round" /></svg>
+                    </button>
+                    <span className="relative flex h-2.5 w-2.5 shrink-0">
+                      <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-rose-400 opacity-70" />
+                      <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-rose-500" />
+                    </span>
+                    <span className="text-sm font-semibold tabular-nums text-ink" dir="ltr">{mmss(voice.seconds)}</span>
+                    <span className="flex h-8 flex-1 items-center justify-center gap-[3px] overflow-hidden" aria-hidden="true">
+                      {Array.from({ length: 18 }, (_, i) => (
+                        <span key={i} className="w-[3px] rounded-full bg-brand/70 transition-[height] duration-100"
+                          style={{ height: `${Math.max(12, Math.min(100, voice.level * 100 * (0.55 + 0.45 * Math.sin(i * 1.7 + voice.seconds))))}%` }} />
+                      ))}
+                    </span>
+                    <span className="hidden text-[11px] text-muted sm:inline">{voice.status === 'processing' ? '…' : `${t.voiceRecording} (${MAX_SECONDS}s)`}</span>
+                    <button type="button" onClick={voice.send} disabled={voice.status === 'processing'} aria-label={t.voiceStop}
+                      className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-ink text-white disabled:opacity-50">
+                      <svg viewBox="0 0 20 20" className="h-4.5 w-4.5 rtl:-scale-x-100" aria-hidden="true"><path d="M3.5 10h12M11 5l5 5-5 5" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round" /></svg>
+                    </button>
+                  </div>
+                ) : (
+                <div className="flex items-end gap-2 rounded-2xl bg-mist p-1.5 ring-1 ring-line focus-within:ring-2 focus-within:ring-brand/40">
+                  <label htmlFor="dentalflow-chat-input" className="sr-only">{t.placeholder}</label>
+                  <textarea
+                    id="dentalflow-chat-input"
+                    ref={input}
+                    rows={1}
+                    value={draft}
+                    maxLength={1000}
+                    onChange={e => setDraft(e.target.value)}
+                    onKeyDown={onKey}
+                    placeholder={t.placeholder}
+                    dir="auto"
+                    className="max-h-[120px] min-h-[40px] flex-1 resize-none bg-transparent px-2.5 py-2 text-[15px] leading-6 text-ink outline-none placeholder:text-muted focus-visible:outline-none"
+                  />
+                  {draft.trim() ? (
+                    <motion.button type="submit" disabled={busy} whileTap={{ scale: 0.9 }} aria-label={t.send}
+                      className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-ink text-white transition disabled:bg-line disabled:text-muted">
+                      <svg viewBox="0 0 20 20" className="h-4.5 w-4.5 rtl:-scale-x-100" aria-hidden="true"><path d="M3.5 10h12M11 5l5 5-5 5" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round" /></svg>
+                    </motion.button>
+                  ) : (
+                    <motion.button type="button" onClick={() => void voice.start()} disabled={busy} whileTap={{ scale: 0.9 }} aria-label={t.voiceStart} title={t.voiceStart}
+                      className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-linear-to-br from-brand to-accent text-white transition disabled:opacity-40">
+                      <svg viewBox="0 0 20 20" className="h-4.5 w-4.5" aria-hidden="true"><rect x="7" y="2.5" width="6" height="10" rx="3" fill="currentColor" /><path d="M4.5 9.5a5.5 5.5 0 0 0 11 0M10 15v2.5" stroke="currentColor" strokeWidth="1.7" fill="none" strokeLinecap="round" /></svg>
+                    </motion.button>
+                  )}
+                </div>
+                )}
+                <p className="mt-2 px-1 text-center text-[10.5px] leading-snug text-muted">
+                  {fill(t.privacy, { phone: `\u2066${phone}\u2069` })} · {t.poweredBy}
+                </p>
+              </form>
+              <AnimatePresence>
+                {panel && <BookingPanel lang={lang} t={t} minWord={minWord} start={panel} onClose={() => setPanel(null)} onConfirm={confirmBooking} />}
+              </AnimatePresence>
+            </div>
           </motion.section>
         )}
       </AnimatePresence>

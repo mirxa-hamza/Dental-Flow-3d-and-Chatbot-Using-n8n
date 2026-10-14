@@ -167,3 +167,33 @@ html[lang="ar"] .eyebrow, html[lang="ur"] .eyebrow { letter-spacing: 0; font-siz
 .hairline { border-color: var(--color-line); }
 .num { font-family: var(--font-display); font-feature-settings: "lnum"; }
 @keyframes df-cue { 0% { transform: translateY(-100%); } 60%, 100% { transform: translateY(300%); } }
+
+/* A translated hero may be taller than the viewport. Let it grow downwards
+   instead of bottom/centre alignment pushing its first lines under the nav. */
+.experience-hero {
+  min-height: 100svh;
+  padding-top: calc(var(--hero-header-bottom, 80px) + 2rem);
+  padding-bottom: 3rem;
+}
+html[lang="ar"] .experience-hero-title {
+  font-size: clamp(2.25rem, 4.6vw, 4rem);
+  line-height: 1.3;
+}
+html[lang="ur"] .experience-hero-title {
+  font-size: clamp(2rem, 4vw, 3.5rem);
+  line-height: 1.85;
+}
+html[lang="ur"] .experience-hero .eyebrow {
+  line-height: 2.2;
+}
+html[lang="ur"] .experience-hero-title + p {
+  line-height: 2.1;
+}
+
+/* Nastaliq extends well above/below the Latin line box. Keep truncation for
+   narrow widths, but give the glyphs enough vertical room inside that box. */
+html[lang="ur"] .nav-clinic-name {
+  font-size: clamp(1rem, 4.5vw, 1.3125rem);
+  line-height: 2.4;
+  padding-block: 0.15em;
+}

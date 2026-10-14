@@ -23,6 +23,7 @@ import { ContactShadows, Environment, Lightformer, PerformanceMonitor, useGLTF }
 import * as THREE from 'three';
 import type { MotionValue } from 'motion/react';
 import { SCENE_READY } from '../ReadyGate';
+import { createMouthFraming } from './framing';
 
 const MODEL = '/models/mouth.glb';
 const clamp01 = (x: number) => Math.min(1, Math.max(0, x));
@@ -212,6 +213,7 @@ function useMouth(mats: Mats): Rig {
     // check-up: a scanning light that sweeps across the front of the teeth
     const scan = new THREE.Mesh(new THREE.BoxGeometry(0.5, 30, 0.5), mats.scan);
     const scanLight = new THREE.PointLight('#7fe3ff', 0, 40, 1.5);
+    scan.name = 'scan';
     root.add(scan, scanLight);
 
     return { root, pivot, lowerJaw, brackets, wires, implant, screw, abutment, newCrown, filling, scan, scanLight, root36: tooth('t36-root'),
@@ -223,6 +225,19 @@ function Mouth({ stage, still }: { stage: MotionValue<number> | null; still: boo
   const mats = useMaterials();
   const rig = useMouth(mats);
   const s = useRef(0);
+  const fit = useMemo(() => createMouthFraming(rig.root), [rig]);
+  const headerBottom = useRef(80);
+
+  useEffect(() => {
+    const nav = document.querySelector('header nav');
+    if (!nav) return;
+    const measure = () => { headerBottom.current = nav.getBoundingClientRect().bottom; };
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(nav);
+    window.addEventListener('resize', measure);
+    return () => { observer.disconnect(); window.removeEventListener('resize', measure); };
+  }, []);
   const { camera, size, pointer } = useThree();
   const look = useRef(v3(0, 0, 8));
   const cam = useRef(new THREE.Vector3().copy(KEYS[0].pos));
@@ -245,18 +260,9 @@ function Mouth({ stage, still }: { stage: MotionValue<number> | null; still: boo
     // camera: rests on each viewpoint, then glides to the next
     const i = Math.min(STAGE_COUNT - 1, Math.floor(S)), j = Math.min(STAGE_COUNT - 1, i + 1);
     const g = sm(0.22, 0.78, S - i);
-    const narrow = size.width < 768;
     const K = (k: number) => KEYS[k];
     const pos = K(i).pos.clone().lerp(K(j).pos, g);
     const lk = K(i).look.clone().lerp(K(j).look, g);
-    if (narrow) {
-      // phones: the camera stands further back (the screen is narrow), and the model
-      // sits in the top part of the screen, above the text
-      const back = Math.min(1.9, Math.max(1, 0.88 / (size.width / size.height)));
-      pos.sub(lk).multiplyScalar(back).add(lk);
-      const tall = 2 * pos.distanceTo(lk) * Math.tan(THREE.MathUtils.degToRad(17));
-      lk.y -= 0.2 * tall; pos.y -= 0.2 * tall;
-    }
     // the smile follows the pointer a little
     const idle = 1 - sm(0, 0.6, S);
     pos.x += idle * (pointer.x * 10 + Math.sin(state.clock.elapsedTime * 0.25) * 6);
@@ -265,11 +271,6 @@ function Mouth({ stage, still }: { stage: MotionValue<number> | null; still: boo
     cam.current.lerp(pos, k); look.current.lerp(lk, k);
     camera.position.copy(cam.current);
     camera.lookAt(look.current);
-    // on wide screens the model sits in the right half, beside the text
-    const pc = camera as THREE.PerspectiveCamera;
-    const shift = narrow ? 0 : 7 * (document.documentElement.dir === 'rtl' ? 1 : -1);
-    if (pc.filmOffset !== shift) { pc.filmOffset = shift; pc.updateProjectionMatrix(); }
-
     // jaw opening between viewpoints
     rig.pivot.rotation.x = -(K(i).open + (K(j).open - K(i).open) * g);
     // for the two lower molars (stages 2 and 5) the upper jaw lifts out of the way
@@ -326,6 +327,10 @@ function Mouth({ stage, still }: { stage: MotionValue<number> | null; still: boo
     const crownIn = sm(5.1, 5.45, S);
     mats.newCrown.opacity = sm(5.05, 5.2, S);
     rig.newCrown.position.y = 9 * (1 - crownIn);
+
+    // Fit AFTER all jaw/implant transforms, including intermediate scroll frames.
+    fit(camera as THREE.PerspectiveCamera, size.width, size.height,
+      document.documentElement.dir === 'rtl', headerBottom.current);
   });
 
   return <primitive object={rig.root} />;
