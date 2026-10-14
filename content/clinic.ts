@@ -19,7 +19,7 @@ export type Dentist = { id: string; name: string; specialty: T; days: T; initial
 export const clinic = {
   name: { en: 'Smile Dental Clinic', ur: 'سمائل ڈینٹل کلینک', ar: 'عيادة سمايل لطب الأسنان' } as T,
   city: { en: 'Lahore', ur: 'لاہور', ar: 'لاهور' } as T,
-  phone: '+92 300 000 0000',
+  phone: '+923197010562',
   /** Digits only, with country code. Empty = no WhatsApp button. */
   whatsapp: '',
   email: 'hello@example.com',
@@ -80,13 +80,30 @@ export const dentists: Dentist[] = [
     days: { en: 'Thursday to Saturday, afternoons', ur: 'جمعرات تا ہفتہ، دوپہر کے بعد', ar: 'الخميس إلى السبت، بعد الظهر' } },
 ];
 
+/** Patient education reviewed against NHS dental check-up and treatment guidance. */
 export const faq: { q: T; a: T }[] = [
-  { q: { en: 'Is there parking?', ur: 'کیا پارکنگ کی سہولت ہے؟', ar: 'هل تتوفر مواقف للسيارات؟' },
-    a: { en: 'Yes, free parking in front of the clinic.', ur: 'جی ہاں، کلینک کے سامنے مفت پارکنگ ہے۔', ar: 'نعم، تتوفر مواقف مجانية أمام العيادة.' } },
-  { q: { en: 'How do I pay?', ur: 'ادائیگی کیسے کر سکتے ہیں؟', ar: 'ما طرق الدفع المتاحة؟' },
-    a: { en: 'Cash, card or bank transfer at the clinic.', ur: 'کلینک پر نقد، کارڈ یا بینک ٹرانسفر کے ذریعے۔', ar: 'نقداً أو بالبطاقة أو بالتحويل البنكي في العيادة.' } },
-  { q: { en: 'Can I change or cancel my appointment?', ur: 'کیا اپائنٹمنٹ تبدیل یا منسوخ کر سکتے ہیں؟', ar: 'هل يمكنني تغيير الموعد أو إلغاؤه؟' },
-    a: { en: 'Yes. Message us on WhatsApp from the number you booked with, up to 4 hours before.', ur: 'جی ہاں۔ جس نمبر سے بکنگ کی تھی اسی سے ہمیں واٹس ایپ پر پیغام بھیجیں، کم از کم 4 گھنٹے پہلے۔', ar: 'نعم. يرجى مراسلتنا على واتساب من الرقم الذي حُجز به الموعد، قبل 4 ساعات على الأقل.' } },
-  { q: { en: 'Do you treat children?', ur: 'کیا آپ بچوں کا علاج کرتے ہیں؟', ar: 'هل تعالجون الأطفال؟' },
-    a: { en: 'Yes, children are very welcome. Mention the child’s age when you book in the chat.', ur: 'جی ہاں، بچوں کو خوش آمدید۔ چیٹ میں بکنگ کرتے وقت بچے کی عمر بتا دیں۔', ar: 'نعم، نرحب بالأطفال. يرجى ذكر عمر الطفل عند الحجز في المحادثة.' } },
+  { q: { en: 'How often should I have a dental check-up?', ur: 'دانتوں کا چیک اپ کتنے عرصے بعد کروانا چاہیے؟', ar: 'كم مرة أحتاج إلى فحص الأسنان؟' },
+    a: { en: 'The right interval depends on your oral health and your risk of tooth decay or gum disease. Your dentist will recommend a schedule after examining your teeth and gums. If a new problem develops, arrange an appointment rather than waiting for your next routine check-up.',
+      ur: 'چیک اپ کا وقفہ آپ کے دانتوں اور مسوڑھوں کی صحت اور بیماری کے خطرے پر منحصر ہے۔ معائنے کے بعد ڈاکٹر مناسب وقفہ تجویز کریں گے۔ کوئی نئی تکلیف ہو تو اگلے معمول کے چیک اپ کا انتظار کرنے کے بجائے اپائنٹمنٹ لیں۔',
+      ar: 'يعتمد موعد الفحص التالي على صحة فمك واحتمال الإصابة بالتسوس أو أمراض اللثة. يحدد طبيب الأسنان الفترة المناسبة بعد فحص الأسنان واللثة. إذا ظهرت مشكلة جديدة، احجز موعداً ولا تنتظر الفحص الدوري التالي.' } },
+  { q: { en: 'What happens during a dental consultation?', ur: 'دانتوں کے ابتدائی معائنے میں کیا ہوتا ہے؟', ar: 'ماذا يحدث خلال استشارة طبيب الأسنان؟' },
+    a: { en: 'A consultation includes a discussion of your concerns and medical history, followed by an examination of your teeth, gums and mouth. The dentist can explain any findings, discuss suitable treatment options and advise you on caring for your teeth at home.',
+      ur: 'مشورے کے دوران آپ کی تکلیف اور طبی تاریخ کے بارے میں پوچھا جاتا ہے، پھر دانتوں، مسوڑھوں اور منہ کا معائنہ کیا جاتا ہے۔ ڈاکٹر معائنے کے نتائج، مناسب علاج کے طریقے اور گھر پر دانتوں کی دیکھ بھال کے بارے میں رہنمائی کر سکتے ہیں۔',
+      ar: 'تشمل الاستشارة مناقشة ما يزعجك وتاريخك الصحي، ثم فحص الأسنان واللثة والفم. يشرح الطبيب نتائج الفحص وخيارات العلاج المناسبة، ويقدم إرشادات للعناية بالأسنان في المنزل.' } },
+  { q: { en: 'What is scaling and polishing?', ur: 'سکیلنگ اور پالش کیا ہے؟', ar: 'ما المقصود بتنظيف وتلميع الأسنان؟' },
+    a: { en: 'Scaling removes plaque and hardened tartar from the teeth. Polishing helps remove surface stains. Your dentist will assess whether you need professional cleaning or further gum treatment; regular brushing and cleaning between teeth remain essential afterwards.',
+      ur: 'سکیلنگ سے دانتوں پر جمی پلاک اور سخت میل صاف کی جاتی ہے، جبکہ پالش سطحی داغ کم کرنے میں مدد دیتی ہے۔ ڈاکٹر معائنے کے بعد بتائیں گے کہ صفائی کافی ہے یا مسوڑھوں کے مزید علاج کی ضرورت ہے۔ اس کے بعد بھی باقاعدہ برش اور دانتوں کے درمیان صفائی ضروری ہے۔',
+      ar: 'يزيل تنظيف الأسنان طبقة البلاك والجير المتصلب، ويساعد التلميع على إزالة التصبغات السطحية. يقيّم الطبيب حاجتك إلى التنظيف المهني أو علاج إضافي للثة. وتبقى العناية اليومية بالفرشاة والتنظيف بين الأسنان ضرورية بعد ذلك.' } },
+  { q: { en: 'When is root canal treatment needed?', ur: 'روٹ کینال کی ضرورت کب ہوتی ہے؟', ar: 'متى أحتاج إلى علاج عصب الأسنان؟' },
+    a: { en: 'Root canal treatment may be needed when the soft tissue inside a tooth becomes infected. The dentist removes the infected tissue, cleans the canals and seals the tooth to help preserve it. Local anaesthetic is usually used, and a crown may be recommended afterwards depending on the condition of the tooth.',
+      ur: 'جب دانت کے اندر موجود نرم بافت میں انفیکشن ہو جائے تو روٹ کینال کی ضرورت پڑ سکتی ہے۔ ڈاکٹر متاثرہ بافت نکال کر جڑ کی نالیوں کو صاف اور بند کرتے ہیں تاکہ دانت بچایا جا سکے۔ عموماً مقامی بے حسی کی دوا استعمال ہوتی ہے، اور دانت کی حالت کے مطابق بعد میں کراؤن لگانے کا مشورہ دیا جا سکتا ہے۔',
+      ar: 'قد يلزم علاج العصب عندما تصاب الأنسجة اللينة داخل السن بالعدوى. يزيل الطبيب الأنسجة المصابة وينظف قنوات الجذور ثم يغلق السن للمساعدة على الحفاظ عليه. يُستخدم عادةً التخدير الموضعي، وقد يُنصح بتركيب تاج لاحقاً بحسب حالة السن.' } },
+  { q: { en: 'Is professional teeth whitening suitable for everyone?', ur: 'کیا دانت سفید کروانا ہر کسی کے لیے مناسب ہے؟', ar: 'هل تبييض الأسنان مناسب للجميع؟' },
+    a: { en: 'A dentist should check that your teeth and gums are healthy before recommending whitening. Whitening changes the colour of natural teeth, but does not lighten crowns or implants. Results vary, and temporary tooth sensitivity or gum irritation can occur. Discuss your dental history and expectations during your consultation.',
+      ur: 'دانت سفید کرنے سے پہلے ڈاکٹر کو دانتوں اور مسوڑھوں کی صحت کا معائنہ کرنا چاہیے۔ یہ علاج قدرتی دانتوں کا رنگ ہلکا کرتا ہے، لیکن کراؤن یا امپلانٹ کا رنگ نہیں بدلتا۔ نتائج مختلف ہو سکتے ہیں اور کچھ عرصے کے لیے حساسیت یا مسوڑھوں میں جلن ہو سکتی ہے۔ مشورے کے دوران اپنی سابقہ دندانی کیفیت اور توقعات بتائیں۔',
+      ar: 'ينبغي فحص صحة الأسنان واللثة قبل التوصية بالتبييض. يغيّر التبييض لون الأسنان الطبيعية، لكنه لا يفتح لون التيجان أو الزرعات. تختلف النتائج، وقد تحدث حساسية مؤقتة في الأسنان أو تهيّج في اللثة. ناقش تاريخك العلاجي وتوقعاتك مع الطبيب خلال الاستشارة.' } },
+  { q: { en: 'How do braces and clear aligners improve my smile?', ur: 'بریسز اور شفاف الائنرز دانتوں کو کیسے درست کرتے ہیں؟', ar: 'كيف تساعد تقويمات الأسنان والمصففات الشفافة على تحسين ابتسامتي؟' },
+    a: { en: 'Orthodontic treatment gradually moves teeth to improve their alignment and how they meet when you bite. Fixed braces and removable clear aligners are different approaches. A dental assessment helps determine which option is appropriate for your teeth and bite.',
+      ur: 'آرتھوڈانٹک علاج دانتوں کو آہستہ آہستہ حرکت دے کر ان کی ترتیب اور کاٹنے کے وقت اوپری اور نچلے دانتوں کے ملاپ کو بہتر بناتا ہے۔ فکسڈ بریسز اور اتارے جانے والے شفاف الائنرز اس کے مختلف طریقے ہیں۔ معائنے سے معلوم ہوتا ہے کہ آپ کے دانتوں اور بائٹ کے لیے کون سا طریقہ مناسب ہے۔',
+      ar: 'يحرك علاج التقويم الأسنان تدريجياً لتحسين انتظامها وطريقة التقاء الأسنان عند العض. التقويم الثابت والمصففات الشفافة القابلة للإزالة طريقتان مختلفتان للعلاج. يساعد الفحص على تحديد الخيار المناسب لأسنانك وإطباقك.' } },
 ];

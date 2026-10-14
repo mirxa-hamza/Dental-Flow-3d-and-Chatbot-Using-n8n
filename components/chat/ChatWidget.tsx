@@ -440,7 +440,7 @@ export function ChatWidget({ lang, t, phone, minWord }: { lang: Lang; t: Dict['c
             className="fixed inset-0 z-50 flex flex-col overflow-hidden bg-mist sm:inset-auto sm:end-6 sm:bottom-24 sm:h-[min(680px,calc(100svh-8rem))] sm:w-[400px] sm:rounded-[1.75rem] sm:shadow-[0_40px_100px_-30px_rgb(11_27_43/0.45)] sm:ring-1 sm:ring-black/5"
           >
             {/* header */}
-            <header className="relative flex items-center gap-3 bg-linear-to-br from-brand-deep via-brand to-accent px-4 pt-[max(0.9rem,env(safe-area-inset-top))] pb-4 text-white">
+            <header className="relative flex shrink-0 items-center gap-3 bg-linear-to-br from-brand-deep via-brand to-accent px-4 pt-[max(0.9rem,env(safe-area-inset-top))] pb-4 text-white">
               <span className="relative grid h-10 w-10 place-items-center rounded-full bg-white/15 ring-1 ring-white/25">
                 <svg viewBox="0 0 24 24" className="h-5 w-5" aria-hidden="true"><path fill="currentColor" d="M12 3.2c-2-1.3-6.4-1.3-7.7 1.6-1.3 2.9.2 6.4 1.1 8.6.9 2.4.7 6.6 2.4 8.4 1.3 1.3 2.2-.7 2.4-2.6.2-1.8.7-3.7 1.8-3.7s1.6 1.9 1.8 3.7c.2 1.9 1.1 3.9 2.4 2.6 1.7-1.8 1.5-6 2.4-8.4.9-2.2 2.4-5.7 1.1-8.6C18.4 1.9 14 1.9 12 3.2z" /></svg>
                 <span className="absolute -end-0.5 -bottom-0.5 h-3 w-3 rounded-full bg-emerald-400 ring-2 ring-brand" />
@@ -462,12 +462,14 @@ export function ChatWidget({ lang, t, phone, minWord }: { lang: Lang; t: Dict['c
               </button>
             </header>
 
-            {/* messages */}
-            <div ref={scroller} className="flex-1 space-y-3 overflow-y-auto overscroll-contain px-4 py-5" aria-live="polite" aria-relevant="additions">
-              <Bubble role="assistant">{t.welcome}</Bubble>
-              {msgs.length === 0 && (
-                <QuickReplies items={t.starters.map(s => ({ title: s, value: s }))} onPick={pick} disabled={busy} />
-              )}
+            {/* Keep overlays below the header, including safe-area and translated text height. */}
+            <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden">
+              {/* messages */}
+              <div ref={scroller} className="flex-1 space-y-3 overflow-y-auto overscroll-contain px-4 py-5" aria-live="polite" aria-relevant="additions">
+                <Bubble role="assistant">{t.welcome}</Bubble>
+                {msgs.length === 0 && (
+                  <QuickReplies items={t.starters.map(s => ({ title: s, value: s }))} onPick={pick} disabled={busy} />
+                )}
 
               {msgs.map(m => (
                 <div key={m.id} className="space-y-2.5">
@@ -555,20 +557,41 @@ export function ChatWidget({ lang, t, phone, minWord }: { lang: Lang; t: Dict['c
                     <svg viewBox="0 0 20 20" className="h-4.5 w-4.5 rtl:-scale-x-100" aria-hidden="true"><path d="M3.5 10h12M11 5l5 5-5 5" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round" /></svg>
                   </motion.button>
                 ) : (
-                  <motion.button type="button" onClick={() => void voice.start()} disabled={busy} whileTap={{ scale: 0.9 }} aria-label={t.voiceStart} title={t.voiceStart}
-                    className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-linear-to-br from-brand to-accent text-white transition disabled:opacity-40">
-                    <svg viewBox="0 0 20 20" className="h-4.5 w-4.5" aria-hidden="true"><rect x="7" y="2.5" width="6" height="10" rx="3" fill="currentColor" /><path d="M4.5 9.5a5.5 5.5 0 0 0 11 0M10 15v2.5" stroke="currentColor" strokeWidth="1.7" fill="none" strokeLinecap="round" /></svg>
-                  </motion.button>
+                <div className="flex items-end gap-2 rounded-2xl bg-mist p-1.5 ring-1 ring-line focus-within:ring-2 focus-within:ring-brand/40">
+                  <label htmlFor="dentalflow-chat-input" className="sr-only">{t.placeholder}</label>
+                  <textarea
+                    id="dentalflow-chat-input"
+                    ref={input}
+                    rows={1}
+                    value={draft}
+                    maxLength={1000}
+                    onChange={e => setDraft(e.target.value)}
+                    onKeyDown={onKey}
+                    placeholder={t.placeholder}
+                    dir="auto"
+                    className="max-h-[120px] min-h-[40px] flex-1 resize-none bg-transparent px-2.5 py-2 text-[15px] leading-6 text-ink outline-none placeholder:text-muted focus-visible:outline-none"
+                  />
+                  {draft.trim() ? (
+                    <motion.button type="submit" disabled={busy} whileTap={{ scale: 0.9 }} aria-label={t.send}
+                      className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-ink text-white transition disabled:bg-line disabled:text-muted">
+                      <svg viewBox="0 0 20 20" className="h-4.5 w-4.5 rtl:-scale-x-100" aria-hidden="true"><path d="M3.5 10h12M11 5l5 5-5 5" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round" /></svg>
+                    </motion.button>
+                  ) : (
+                    <motion.button type="button" onClick={() => void voice.start()} disabled={busy} whileTap={{ scale: 0.9 }} aria-label={t.voiceStart} title={t.voiceStart}
+                      className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-linear-to-br from-brand to-accent text-white transition disabled:opacity-40">
+                      <svg viewBox="0 0 20 20" className="h-4.5 w-4.5" aria-hidden="true"><rect x="7" y="2.5" width="6" height="10" rx="3" fill="currentColor" /><path d="M4.5 9.5a5.5 5.5 0 0 0 11 0M10 15v2.5" stroke="currentColor" strokeWidth="1.7" fill="none" strokeLinecap="round" /></svg>
+                    </motion.button>
+                  )}
+                </div>
                 )}
-              </div>
-              )}
-              <p className="mt-2 px-1 text-center text-[10.5px] leading-snug text-muted">
-                {fill(t.privacy, { phone: `\u2066${phone}\u2069` })} · {t.poweredBy}
-              </p>
-            </form>
-            <AnimatePresence>
-              {panel && <BookingPanel lang={lang} t={t} minWord={minWord} start={panel} onClose={() => setPanel(null)} onConfirm={confirmBooking} />}
-            </AnimatePresence>
+                <p className="mt-2 px-1 text-center text-[10.5px] leading-snug text-muted">
+                  {fill(t.privacy, { phone: `\u2066${phone}\u2069` })} · {t.poweredBy}
+                </p>
+              </form>
+              <AnimatePresence>
+                {panel && <BookingPanel lang={lang} t={t} minWord={minWord} start={panel} onClose={() => setPanel(null)} onConfirm={confirmBooking} />}
+              </AnimatePresence>
+            </div>
           </motion.section>
         )}
       </AnimatePresence>

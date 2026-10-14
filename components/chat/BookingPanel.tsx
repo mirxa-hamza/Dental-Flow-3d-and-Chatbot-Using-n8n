@@ -158,11 +158,11 @@ export function BookingPanel({ lang, t, minWord, start, onClose, onConfirm }: {
   return (
     <motion.div
       initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }} transition={{ type: 'spring', stiffness: 340, damping: 34 }}
-      className="absolute inset-x-0 bottom-0 top-14 z-20 flex flex-col overflow-hidden rounded-t-[1.5rem] bg-mist shadow-[0_-20px_50px_-20px_rgb(11_27_43/0.35)] ring-1 ring-black/5"
+      className="absolute inset-x-0 bottom-0 top-3 z-20 flex flex-col overflow-hidden rounded-t-[1.5rem] bg-mist shadow-[0_-20px_50px_-20px_rgb(11_27_43/0.35)] ring-1 ring-black/5"
       role="dialog" aria-label={t.panelTitle}
     >
       {/* header */}
-      <div className="flex items-center gap-2 border-b border-line/70 bg-white/90 px-3 py-3 backdrop-blur">
+      <div className="flex shrink-0 items-center gap-2 border-b border-line/70 bg-white/90 px-3 py-3 backdrop-blur">
         <button type="button" onClick={back} aria-label={t.back} className="grid h-9 w-9 place-items-center rounded-full hover:bg-mist">
           <svg viewBox="0 0 20 20" className="h-4.5 w-4.5 rtl:-scale-x-100" aria-hidden="true"><path d="M12 5l-5 5 5 5" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round" /></svg>
         </button>
@@ -184,7 +184,7 @@ export function BookingPanel({ lang, t, minWord, start, onClose, onConfirm }: {
       )}
 
       {/* body */}
-      <div className="flex-1 overflow-y-auto overscroll-contain px-4 py-3">
+      <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-3">
         <AnimatePresence mode="wait" initial={false}>
           <motion.div key={step + day} initial={{ opacity: 0, x: 16 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -16 }} transition={{ duration: 0.18 }} className="space-y-2">
             {failed && (

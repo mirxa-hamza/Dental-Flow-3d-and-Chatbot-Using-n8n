@@ -5,7 +5,7 @@
  * position becomes `stage` (0 to 5.6), which flies the camera to the part
  * of the mouth each panel talks about (see three/MouthScene.tsx).
  */
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { motion, useMotionValueEvent, useReducedMotion, useScroll, useTransform } from 'motion/react';
 import { fill, type Dict } from '@/lib/i18n';
 import { MouthScene, ToothArt, useWebGL } from '../three/SceneLoader';
@@ -18,19 +18,49 @@ const SERVICE: (string | null)[] = [null, 'checkup', 'filling', 'whiten', null, 
 
 export function Experience({ t, city }: { t: Dict; city: string }) {
   const host = useRef<HTMLElement>(null);
+  const hero = useRef<HTMLDivElement>(null);
+  const [layout, setLayout] = useState({ viewport: 1, extra: 0 });
   const reduce = !!useReducedMotion();
+
+  useEffect(() => {
+    const panel = hero.current;
+    const section = host.current;
+    const nav = document.querySelector('header nav');
+    const viewport = section?.querySelector<HTMLElement>('[data-scene-viewport]');
+    if (!panel || !section || !viewport) return;
+    const measure = () => {
+      // Include the fixed header's top inset and allow room for Nastaliq ascenders.
+      section.style.setProperty('--hero-header-bottom', `${nav?.getBoundingClientRect().bottom ?? 80}px`);
+      const height = viewport.offsetHeight;
+      const extra = Math.max(0, panel.offsetHeight - height);
+      setLayout(previous => previous.viewport === height && previous.extra === extra
+        ? previous : { viewport: height, extra });
+    };
+    const observer = new ResizeObserver(measure);
+    observer.observe(panel);
+    observer.observe(viewport);
+    if (nav) observer.observe(nav);
+    window.addEventListener('resize', measure);
+    measure();
+    return () => { observer.disconnect(); window.removeEventListener('resize', measure); };
+  }, []);
   const webgl = useWebGL();
   const { scrollYProgress } = useScroll({ target: host, offset: ['start start', 'end end'] });
-  const stage = useTransform(scrollYProgress, p => p * (STAGES - 1 + TAIL));
+  const stage = useTransform(scrollYProgress, p => {
+    const distance = p * ((STAGES - 1 + TAIL) * layout.viewport + layout.extra);
+    const heroHeight = layout.viewport + layout.extra;
+    // Longer translations can grow the welcome panel without shifting treatment cues.
+    return distance <= heroHeight ? distance / heroHeight : 1 + (distance - heroHeight) / layout.viewport;
+  });
   const [current, setCurrent] = useState(0);
   useMotionValueEvent(stage, 'change', v => { const c = Math.min(STAGES - 1, Math.round(v)); setCurrent(p => (p === c ? p : c)); });
   const up = (i: number) => ({ style: { '--rise-delay': `${0.08 + i * 0.08}s` } as React.CSSProperties });
   const stages = t.story.stages;
 
   return (
-    <section ref={host} id="experience" className="relative" style={{ height: `${(STAGES + TAIL) * 100}svh` }}>
+    <section ref={host} id="experience" className="relative" style={{ height: `calc(${(STAGES + TAIL) * 100}svh + ${layout.extra}px)` }}>
       {/* the model, pinned while the panels scroll over it */}
-      <div className="sticky top-0 h-svh overflow-hidden">
+      <div data-scene-viewport className="sticky top-0 h-svh overflow-hidden">
         <div className="absolute inset-0 bg-[radial-gradient(70%_60%_at_68%_45%,#ffffff_0%,#eef3f8_55%,var(--page-bg)_100%)]" />
         <div className="rise-scene absolute inset-0">
           {webgl === false
@@ -55,13 +85,13 @@ export function Experience({ t, city }: { t: Dict; city: string }) {
       {/* the panels */}
       <div className="absolute inset-x-0 top-0">
         {/* 0: welcome */}
-        <div className="flex h-svh items-end pb-12 md:items-center md:pb-0 md:pt-20">
+        <div ref={hero} className="experience-hero flex items-end md:items-center">
           <div className="mx-auto w-full max-w-6xl px-5">
             <div className="max-w-xl">
               <p {...up(0)} className="rise eyebrow mb-6 flex items-center gap-3">
                 <span className="h-px w-8 bg-brand" />{fill(t.hero.eyebrow, { city })}
               </p>
-              <h1 className="font-display text-balance text-[2.75rem] leading-[0.98] text-ink sm:text-6xl lg:text-[4.75rem]">
+              <h1 className="experience-hero-title font-display text-balance text-[2.75rem] leading-[0.98] text-ink sm:text-6xl lg:text-[4.75rem]">
                 <span {...up(1)} className="rise block">{t.hero.title1}</span>
                 <span {...up(2)} className="rise block italic text-brand rtl:not-italic">{t.hero.title2}</span>
               </h1>

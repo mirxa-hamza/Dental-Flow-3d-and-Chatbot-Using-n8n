@@ -39,7 +39,7 @@ export function Nav({ lang, t, clinicName }: { lang: Lang; t: Dict; clinicName: 
       >
         <Link href={`/${lang}`} className="flex min-w-0 items-center gap-2.5 rounded-xl">
           <LogoMark className="h-9 w-9 shrink-0" />
-          <span className="font-display truncate text-[21px] leading-none text-ink">{clinicName}</span>
+          <span className="nav-clinic-name font-display min-w-0 truncate text-[21px] leading-none text-ink">{clinicName}</span>
         </Link>
 
         <ul className="ms-auto hidden items-center gap-1 lg:flex">
@@ -52,7 +52,7 @@ export function Nav({ lang, t, clinicName }: { lang: Lang; t: Dict; clinicName: 
           ))}
         </ul>
 
-        <div className="ms-auto flex items-center gap-2 lg:ms-2">
+        <div className="ms-auto flex shrink-0 items-center gap-2 lg:ms-2">
           <div className="hidden sm:block"><LangSwitch lang={lang} label={t.nav.language} /></div>
           <div className="hidden sm:block"><OpenChatButton className="px-4! py-2.5!">{t.nav.book}</OpenChatButton></div>
           <button
