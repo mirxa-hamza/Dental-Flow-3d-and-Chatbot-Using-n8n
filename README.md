@@ -28,11 +28,14 @@ The chat in the corner is the same assistant the clinic uses on WhatsApp. Visito
 
 - **tap to book**: treatment → dentist → a list of real free times → name, mobile and email → confirm;
 - **type** questions in English, Urdu or Arabic (prices, hours, location, parking…);
-- **send a voice note**, which is transcribed and answered.
+- **send a voice note**, which is transcribed and answered;
+- **view and cancel** their appointments: they type the mobile number or email they booked with, their upcoming appointments appear as cards, and **Cancel** asks "Are you sure?" before freeing the dentist's time.
 
 ![Booking from a treatment panel: the free times appear straight away](docs/screenshots/chat-booking.png)
 
 Every booking is re-checked against the live calendar before it is confirmed. The patient then receives an email and a WhatsApp message with the reference number.
+
+![Viewing and cancelling appointments in the chat](docs/screenshots/chat-appointments.png)
 
 ### 3. Three languages, any screen
 English, Urdu (Nastaliq) and Arabic, with a full right-to-left layout. On phones the model sits above the text.
@@ -50,6 +53,8 @@ flowchart LR
   V[Visitor's browser] -->|chat, voice, booking form| W[This website<br/>Next.js on Vercel]
   W -->|/api/chat, with a secret key| N[n8n workflow 17<br/>Web Chat]
   W -->|/api/slots| S[n8n workflow 01<br/>free times]
+  W -->|/api/appointments| A[n8n workflow 18<br/>view and cancel]
+  A --> C
   N --> G[Gemini<br/>assistant + speech to text]
   N --> B[n8n booking engine]
   B --> C[(Google Calendar<br/>+ Sheets)]
@@ -110,9 +115,10 @@ n8n must be running and reachable for the chat to answer. When it isn't, the cha
 app/[lang]/page.tsx        the page (/en, /ur, /ar)
 app/api/chat/route.ts      passes chat messages and voice notes to n8n; holds the secret key
 app/api/slots/route.ts     free times for the booking panel
+app/api/appointments/route.ts  a visitor's appointments, and cancelling one (n8n workflow 18)
 components/sections/       the 3D scroll story (Experience.tsx), treatments, dentists, visit, FAQ
 components/three/          the 3D mouth scene
-components/chat/           the chat window, booking panel and voice recorder
+components/chat/           the chat window, booking panel, appointment cards and voice recorder
 content/clinic.ts          the clinic's details
 lib/i18n.ts                all texts in English, Urdu and Arabic
 public/models/mouth.glb    the 3D model
@@ -123,6 +129,7 @@ docs/screenshots/          the pictures in this file
 ## Safety and privacy
 
 - The n8n key stays on the server. The chat route only accepts requests from the site itself and limits each visitor to 12 messages a minute and 150 a day.
+- Appointment lookups need no code: anyone with a patient's mobile number or email can see and cancel their appointments. The cards show no name, phone or email; each visitor can look up 8 times in 10 minutes; and the patient is emailed about every cancellation. Workflow 18 can require the mobile number and the email together (`MATCH = 'both'`).
 - Voice notes are converted in the browser, sent once for transcription and never stored by the website.
 - The chat is kept only in the visitor's own browser for 24 hours, so a reload doesn't lose it; **Start over** clears it.
 - Visitors who ask their device for less motion get a still model; devices without 3D support get a drawing instead.

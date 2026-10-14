@@ -15,12 +15,19 @@
  *   and only Confirm sends a message.
  * - The microphone button records a voice message; the assistant listens to
  *   it (in n8n) and the words it heard are shown under the voice bubble.
+ * - "View My Appointments" and "Cancel an Appointment" run here, without the
+ *   assistant: the visitor types the mobile number or email they booked with,
+ *   their upcoming appointments appear as cards (/api/appointments, n8n
+ *   workflow 18), and a card's Cancel asks "Are you sure?" first. The number
+ *   or email is kept in memory only, never in the browser's storage.
  * - Other parts of the page open it with openChat() from sections/ui.
  */
 import { useCallback, useEffect, useRef, useState, type FormEvent, type KeyboardEvent } from 'react';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import type { Booking, Carousel, ChatResponse, DemoState, HistoryItem, QuickReply } from '@/lib/chat-types';
-import { fill, type Dict, type Lang } from '@/lib/i18n';
+import { dictionaries, fill, type Dict, type Lang } from '@/lib/i18n';
+import { readContact, type Appointment, type AppointmentsAnswer, type Contact } from '@/lib/appointments';
+import { AppointmentCards } from './Appointments';
 import { OPEN_CHAT_EVENT, type OpenChatDetail } from '../sections/ui';
 import { Avatar, BookingCard, Carousel as CarouselView, QuickReplies, RichText, Typing } from './parts';
 import { BookingPanel, requestMessage, type BookingRequest, type PanelStart } from './BookingPanel';
@@ -51,6 +58,23 @@ type Msg = {
   heard?: string;
   /** a booking sent from the booking panel, shown as a card */
   request?: BookingRequest;
+  /** the visitor's appointments, shown as cards ("key" ties them to the number or email looked up during this visit) */
+  appts?: { purpose: 'view' | 'cancel'; items: Appointment[]; key: string };
+};
+
+/** the menu buttons, in every language the assistant may write them in (it can answer in Roman Urdu too) */
+type Action = 'book' | 'view' | 'cancel' | 'never' | 'another';
+const norm = (s: string) => s.trim().toLowerCase().replace(/\s+/g, ' ');
+const ACTIONS: [Action, string[]][] = [
+  ['book', ['book appointment', 'nayi appointment book karein', ...Object.values(dictionaries).flatMap(d => [d.chat.starters[0]])]],
+  ['view', ['meri appointments dekhein', ...Object.values(dictionaries).map(d => d.chat.starters[1])]],
+  ['cancel', ['appointment cancel karein', ...Object.values(dictionaries).map(d => d.chat.starters[2])]],
+  ['never', Object.values(dictionaries).map(d => d.chat.neverMind)],
+  ['another', Object.values(dictionaries).map(d => d.chat.tryAnother)],
+];
+const actionOf = (title: string): Action | null => {
+  const n = norm(title);
+  return ACTIONS.find(([, labels]) => labels.some(l => norm(l) === n))?.[0] ?? null;
 };
 
 const STORE_KEY = 'dentalflow-chat:v1';
@@ -89,6 +113,7 @@ function toHistory(msgs: Msg[]): HistoryItem[] {
     if (m.quickReplies?.length) text += `\n[buttons] ${m.quickReplies.map(q => q.title).join(' | ')}`;
     if (m.carousel?.items.length) text += `\n[list${m.carousel.label ? `: ${m.carousel.label}` : ''}] ${m.carousel.items.map(i => i.subtitle ? `${i.title} ~ ${i.subtitle}` : i.title).join(' | ')}`;
     if (m.booking) text += `\n(Booked: ${m.booking.reference}, ${m.booking.when})`;
+    if (m.appts) text += `\n(Their appointments, shown as cards: ${m.appts.items.map(a => `${a.reference} ${a.service} ${a.date} ${a.time}${a.dentist ? ' with ' + a.dentist : ''} - ${a.status}`).join('; ') || 'none'})`;
     if (text.trim()) out.push({ role: 'assistant', text: text.trim() });
     if (m.note) out.push({ role: 'note', text: m.note });
   }
@@ -113,6 +138,8 @@ export function ChatWidget({ lang, t, phone, minWord }: { lang: Lang; t: Dict['c
   // restore the chat kept in this browser, and ask the site whether the chat is connected to the clinic.
   // A chat that was kept from demo mode is not carried over into the real one (and the other way round).
   const [serverDemo, setServerDemo] = useState<boolean | null>(null);
+  const serverDemoRef = useRef<boolean | null>(null);
+  useEffect(() => { serverDemoRef.current = serverDemo; }, [serverDemo]);
   useEffect(() => {
     const kept = load();
     session.current = kept?.sessionId ?? uid();
@@ -194,6 +221,80 @@ export function ChatWidget({ lang, t, phone, minWord }: { lang: Lang; t: Dict['c
     void send(requestMessage(r), t.bookingRequest, { request: r });
   };
 
+  // "View My Appointments" / "Cancel an Appointment": handled here, never by the assistant
+  const [lookup, setLookup] = useState<'view' | 'cancel' | null>(null);
+  const lastPurpose = useRef<'view' | 'cancel'>('view');
+  const contact = useRef<{ key: string; value: Contact } | null>(null);
+  const callAppointments = async (body: Record<string, unknown>): Promise<AppointmentsAnswer & { status?: number }> => {
+    try {
+      const res = await fetch('/api/appointments', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...body, lang }) });
+      const data = (await res.json().catch(() => null)) as AppointmentsAnswer | null;
+      if (res.status === 429) return { ok: false, reason: 'too-many', status: 429 };
+      if (!data) return { ok: false, reason: 'failed', status: res.status };
+      return { ...data, status: res.status };
+    } catch { return { ok: false, reason: 'failed' }; }
+  };
+  const say = (text: string, quickReplies: QuickReply[] = [], extra: Partial<Msg> = {}) =>
+    setMsgs(m => [...m, { id: uid(), role: 'assistant', text, quickReplies, demo: serverDemoRef.current === true, ...extra }]);
+  const qr = (...titles: string[]) => titles.map(x => ({ title: x, value: x }));
+  const phoneText = `\u2066${phone}\u2069`;
+
+  const showAppointments = async (purpose: 'view' | 'cancel', value: Contact) => {
+    setBusy(true);
+    const r = await callAppointments({ action: 'list', contact: value });
+    setBusy(false);
+    if (!r.ok) {
+      say(r.reason === 'too-many' ? fill(t.tooMany, { phone: phoneText }) : r.reason === 'invalid-contact' ? t.badContact : t.lookupError,
+        r.reason === 'too-many' ? [] : qr(t.tryAnother, t.starters[0]), { error: r.reason !== 'invalid-contact' && r.reason !== 'too-many' });
+      if (r.reason === 'invalid-contact') setLookup(purpose);
+      return;
+    }
+    if (!('appointments' in r)) return;
+    const key = uid();
+    contact.current = { key, value };
+    if (!r.appointments.length) { say(t.noneFound, qr(t.starters[0], t.tryAnother)); return; }
+    say(purpose === 'cancel' ? t.foundCancel : t.foundView, purpose === 'view' ? qr(t.starters[0]) : [], { appts: { purpose, items: r.appointments, key } });
+  };
+  const startLookup = (purpose: 'view' | 'cancel', shown: string) => {
+    lastPurpose.current = purpose;
+    setMsgs(m => [...m.filter(x => !x.error), { id: uid(), role: 'user', text: shown }]);
+    // the same visit already looked up a number or email: use it again
+    if (contact.current) { void showAppointments(purpose, contact.current.value); return; }
+    setLookup(purpose);
+    say(purpose === 'cancel' ? t.askContactCancel : t.askContactView, qr(t.neverMind));
+    requestAnimationFrame(() => input.current?.focus({ preventScroll: true }));
+  };
+  const submitContact = (text: string) => {
+    const typed = text.trim().slice(0, 200);
+    if (!typed || busy || !lookup) return;
+    setDraft('');
+    setMsgs(m => [...m, { id: uid(), role: 'user', text: typed }]);
+    const value = readContact(typed);
+    if (!value) { say(t.badContact, qr(t.neverMind)); return; }
+    const purpose = lookup;
+    setLookup(null);
+    void showAppointments(purpose, value);
+  };
+  const cancelAppointment = async (key: string, reference: string): Promise<boolean> => {
+    if (!contact.current || contact.current.key !== key) { say(t.lookAgain, qr(t.starters[2])); return false; }
+    const r = await callAppointments({ action: 'cancel', contact: contact.current.value, reference });
+    const mark = () => setMsgs(m => m.map(x => (x.appts?.key === key
+      ? { ...x, appts: { ...x.appts, items: x.appts.items.map(a => (a.reference === reference ? { ...a, status: 'cancelled' as const } : a)) } } : x)));
+    if (r.ok && 'cancelled' in r) {
+      mark();
+      say(`${fill(t.cancelledMsg, { ref: reference })}${r.emailed ? `\n${t.cancelledEmailed}` : ''}`, qr(t.starters[0]));
+      return true;
+    }
+    const reason = r.ok ? 'failed' : r.reason;
+    if (reason === 'already-cancelled') { mark(); say(t.alreadyCancelled, qr(t.starters[0])); return true; }
+    say(reason === 'too-many' ? fill(t.tooMany, { phone: phoneText })
+      : reason === 'past' ? fill(t.pastAppt, { phone: phoneText })
+      : reason === 'too-late' ? fill(t.tooLate, { phone: phoneText })
+      : reason === 'not-found' ? t.lookAgain
+      : fill(t.cancelFailed, { phone: phoneText }));
+    return false;
+  };
+
   // voice messages
   const voice = useVoice(
     d => void send('', undefined, { audio: { mime: 'audio/wav', data: d.base64 }, voice: { seconds: d.seconds, url: d.url } }),
@@ -240,15 +341,17 @@ export function ChatWidget({ lang, t, phone, minWord }: { lang: Lang; t: Dict['c
 
   const restart = () => {
     setPanel(null);
+    setLookup(null);
+    contact.current = null;
     session.current = uid();
     demoState.current = null;
     setMsgs([]);
     setDraft('');
   };
 
-  const onSubmit = (e: FormEvent) => { e.preventDefault(); void send(draft); };
+  const onSubmit = (e: FormEvent) => { e.preventDefault(); if (lookup) submitContact(draft); else void send(draft); };
   const onKey = (e: KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) { e.preventDefault(); void send(draft); }
+    if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) { e.preventDefault(); if (lookup) submitContact(draft); else void send(draft); }
   };
   // grow the text box with its content, up to five lines
   useEffect(() => {
@@ -261,9 +364,21 @@ export function ChatWidget({ lang, t, phone, minWord }: { lang: Lang; t: Dict['c
   const last = msgs[msgs.length - 1];
   // the Demo label shows only while the site really is in demo mode
   const isDemo = serverDemo ?? !!msgs.filter(m => m.role === 'assistant' && !m.error).pop()?.demo;
-  // "Book appointment" (from the welcome buttons, or the assistant's) opens the booking panel instead of sending
-  const isBookButton = (s: string) => s.trim().toLowerCase() === t.starters[0].toLowerCase() || /^book appointment$/i.test(s.trim());
-  const pick = (value: string, title: string) => (isBookButton(title) ? setPanel({}) : void send(value, title));
+  // the menu buttons (the welcome's, or the same ones from the assistant) work here, without a message:
+  // Book opens the booking panel; View and Cancel ask for the number or email; "Never mind" leaves that
+  const pick = (value: string, title: string) => {
+    const a = actionOf(title);
+    if (a !== 'never') setLookup(null);
+    if (a === 'book') setPanel({});
+    else if (a === 'view' || a === 'cancel') startLookup(a, title);
+    else if (a === 'another') { contact.current = null; startLookup(lastPurpose.current, title); }
+    else if (a === 'never') {
+      setLookup(null);
+      setMsgs(m => [...m, { id: uid(), role: 'user', text: title }]);
+      say(t.neverMindReply, qr(...t.starters));
+    }
+    else void send(value, title);
+  };
   const mmss = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
 
   return (
@@ -376,6 +491,10 @@ export function ChatWidget({ lang, t, phone, minWord }: { lang: Lang; t: Dict['c
                     </div>
                   )}
                   {m.carousel && <CarouselView data={m.carousel} onPick={pick} disabled={busy || m !== last} hint={t.scrollHint} />}
+                  {m.appts && m.appts.items.length > 0 && (
+                    <AppointmentCards items={m.appts.items} purpose={m.appts.purpose} lang={lang} t={t}
+                      canCancel={contact.current?.key === m.appts.key} onCancel={ref => cancelAppointment(m.appts!.key, ref)} />
+                  )}
                   {m.quickReplies && m.quickReplies.length > 0 && m === last && <QuickReplies items={m.quickReplies} onPick={pick} disabled={busy} />}
                   {m.booking && <BookingCard b={m.booking} t={t} demo={m.demo} />}
                 </div>
@@ -426,7 +545,7 @@ export function ChatWidget({ lang, t, phone, minWord }: { lang: Lang; t: Dict['c
                   maxLength={1000}
                   onChange={e => setDraft(e.target.value)}
                   onKeyDown={onKey}
-                  placeholder={t.placeholder}
+                  placeholder={lookup ? t.contactPlaceholder : t.placeholder}
                   dir="auto"
                   className="max-h-[120px] min-h-[40px] flex-1 resize-none bg-transparent px-2.5 py-2 text-[15px] leading-6 text-ink outline-none placeholder:text-muted focus-visible:outline-none"
                 />
