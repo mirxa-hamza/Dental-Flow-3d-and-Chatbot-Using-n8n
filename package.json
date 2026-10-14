@@ -1,0 +1,33 @@
+{
+  "name": "dentalflow-website",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Clinic landing page with scroll-linked 3D and a chat widget connected to DentalFlow (n8n).",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@fontsource-variable/manrope": "5.3.0",
+    "@fontsource/ibm-plex-sans-arabic": "5.3.0",
+    "@fontsource/noto-nastaliq-urdu": "5.3.0",
+    "@react-three/drei": "10.7.9",
+    "@react-three/fiber": "9.8.1",
+    "motion": "14.1.0",
+    "next": "16.4.0",
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
+    "three": "0.186.1"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "4.3.3",
+    "@types/node": "22.20.5",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "@types/three": "0.186.0",
+    "tailwindcss": "4.3.3",
+    "typescript": "5.9.3"
+  }
+}
