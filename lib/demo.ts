@@ -24,6 +24,7 @@ const S = {
     book: 'Book appointment',
     voice: 'Demo mode: voice messages are understood once the website is connected to the clinic. Please type your message for now.',
     formDone: 'Booked! (Demo: nothing was really booked.)',
+    manage: 'You can see or cancel your appointments right here in the chat. Tap one of these:',
   },
   ur: {
     which: 'آپ کون سا علاج کروانا چاہتے ہیں؟ کسی ایک پر ٹیپ کریں یا اپنے الفاظ میں بتائیں۔',
@@ -39,6 +40,7 @@ const S = {
     book: 'اپائنٹمنٹ بک کریں',
     voice: 'ڈیمو موڈ: ویب سائٹ کلینک سے منسلک ہونے کے بعد وائس میسج سمجھے جائیں گے۔ فی الحال براہِ کرم اپنا پیغام لکھیں۔',
     formDone: 'بکنگ ہو گئی! (ڈیمو: اصل میں کوئی بکنگ نہیں ہوئی۔)',
+    manage: 'آپ اپنی اپائنٹمنٹس یہیں چیٹ میں دیکھ یا منسوخ کر سکتے ہیں۔ ان میں سے کسی ایک پر ٹیپ کریں:',
   },
   ar: {
     which: 'ما العلاج المطلوب؟ يمكن اختيار أحد الخيارات أو كتابته بكلماتك.',
@@ -54,6 +56,7 @@ const S = {
     book: 'حجز موعد',
     voice: 'وضع تجريبي: ستُفهم الرسائل الصوتية بعد ربط الموقع بالعيادة. يرجى كتابة رسالتك حالياً.',
     formDone: 'تم الحجز! (وضع تجريبي: لم يتم أي حجز فعلي.)',
+    manage: 'يمكنك عرض مواعيدك أو إلغاؤها هنا في المحادثة. اختر أحد الخيارين:',
   },
 } satisfies Record<Lang, Record<string, string>>;
 
@@ -114,12 +117,17 @@ export function demoReply(req: ChatRequest): ChatResponse {
   }
 
   // Questions that can come at any point
-  if (has(msg, starters[1]) || /\b(hours?|open|timings?|location|address|where)\b/i.test(msg) || /اوقات|پتہ|ساعات|العنوان|الموقع/.test(msg)) {
+  // Seeing or cancelling an appointment happens in the chat window itself: offer its two buttons
+  if (/\b(cancel|cancell?ation|my appointments?|my booking|reschedule)\b/i.test(msg) || /منسوخ|کینسل|إلغاء|مواعيدي|میری اپائنٹمنٹ/.test(msg)) {
+    return { ...base(lang, { step: 'start' }), reply: s.manage,
+      quickReplies: [{ title: starters[1], value: starters[1] }, { title: starters[2], value: starters[2] }] };
+  }
+  if (/\b(hours?|open|timings?|location|address|where)\b/i.test(msg) || /اوقات|پتہ|ساعات|العنوان|الموقع/.test(msg)) {
     const hours = clinic.hours.map(h => `${h.day[lang]}: ${h.time || s.closed}`).join('\n');
     return { ...base(lang, { step: 'start' }), reply: `${s.hours}\n${hours}\n\n${fill(s.find, { address: clinic.address[lang] })}`,
       quickReplies: [{ title: s.book, value: s.book }] };
   }
-  if (has(msg, starters[2]) || /\b(human|person|staff|call|talk)\b/i.test(msg)) {
+  if (/\b(human|person|staff|call|talk)\b/i.test(msg)) {
     return { ...base(lang, { step: 'start' }), reply: fill(s.talk, { phone: `\u2066${clinic.phone}\u2069` }), quickReplies: [{ title: s.book, value: s.book }] };
   }
 
